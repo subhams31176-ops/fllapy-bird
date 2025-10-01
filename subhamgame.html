@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flappy Bird Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+            background: #70c5ce; /* Sky blue */
+        }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Resize canvas to full screen
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Bird
+    const bird = {
+        x: 80,
+        y: 150,
+        width: 30,
+        height: 30,
+        gravity: 0.6,
+        lift: -12,
+        velocity: 0
+    };
+
+    // Pipes
+    const pipes = [];
+    let pipeGap = 150;
+    let pipeWidth = 60;
+    let pipeSpeed = 2;
+    let pipeInterval = 1800;
+    let lastPipeTime = Date.now();
+
+    let score = 0;
+    let gameOver = false;
+
+    function createPipe() {
+        const minHeight = 50;
+        const maxHeight = canvas.height - pipeGap - 100;
+        const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
+        pipes.push({
+            x: canvas.width,
+            top: topHeight,
+            bottom: topHeight + pipeGap,
+            width: pipeWidth
+        });
+    }
+
+    function drawBird() {
+        ctx.fillStyle = "red";
+        ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+    }
+
+    function drawPipes() {
+        ctx.fillStyle = "green";
+        pipes.forEach(pipe => {
+            ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+            ctx.fillRect(pipe.x, pipe.bottom, pipe.width, canvas.height - pipe.bottom);
+        });
+    }
+
+    function updatePipes() {
+        pipes.forEach((pipe, index) => {
+            pipe.x -= pipeSpeed;
+
+            // Collision
+            if (
+                bird.x < pipe.x + pipe.width &&
+                bird.x + bird.width > pipe.x &&
+                (bird.y < pipe.top || bird.y + bird.height > pipe.bottom)
+            ) {
+                endGame();
+            }
+
+            // Remove off-screen pipes and update score
+            if (pipe.x + pipe.width < 0) {
+                pipes.splice(index, 1);
+                if (!gameOver) score++;
+            }
+        });
+    }
+
+    function updateBird() {
+        bird.velocity += bird.gravity;
+        bird.y += bird.velocity;
+
+        // Check ground or ceiling hit
+        if (bird.y + bird.height > canvas.height || bird.y < 0) {
+            endGame();
+        }
+    }
+
+    function drawScore() {
+        ctx.fillStyle = "white";
+        ctx.font = "24px Arial";
+        ctx.fillText("Score: " + score, 20, 40);
+    }
+
+    function endGame() {
+        gameOver = true;
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0, canvas.height / 2 - 80, canvas.width, 160);
+        ctx.fillStyle = "white";
+        ctx.font = "36px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 10);
+        ctx.font = "24px Arial";
+        ctx.fillText("Final Score: " + score, canvas.width / 2, canvas.height / 2 + 30);
+    }
+
+    function flap() {
+        if (!gameOver) {
+            bird.velocity = bird.lift;
+        }
+    }
+
+    // Controls: Spacebar and tap
+    document.addEventListener("keydown", function(e) {
+        if (e.code === "Space") flap();
+    });
+
+    document.addEventListener("touchstart", flap);
+    document.addEventListener("mousedown", flap);
+
+    // Main game loop
+    function gameLoop() {
+        if (gameOver) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        updateBird();
+        drawBird();
+
+        if (Date.now() - lastPipeTime > pipeInterval) {
+            createPipe();
+            lastPipeTime = Date.now();
+        }
+
+        updatePipes();
+        drawPipes();
+        drawScore();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Start game
+    createPipe();
+    gameLoop();
+</script>
+</body>
+</html>
